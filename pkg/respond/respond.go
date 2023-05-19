@@ -6,13 +6,14 @@ import (
 	"net/http"
 )
 
+const (
+	EncodeJSON = 0
+	EncodeXML = 1
+)
+
 // A problem details object conforming to RFC 7807 §3.1.
 // https://datatracker.ietf.org/doc/html/rfc7807#section-3.1
 // 
-// If Type, Title, Detail, or Instance is an empty string, it will not be included
-// in the JSON/XML encoding of Problem.
-// 
-//
 // TODO: Examples.
 type Problem struct {
 	Type string
@@ -20,6 +21,7 @@ type Problem struct {
 	Status int
 	Detail string
 	Instance string
+	// Non-standard fields. Values are serialized using json.Marshal()
 	Extensions map[string]any
 }
 
@@ -55,6 +57,32 @@ func (p Problem) MarshalJSON() ([]byte, error) {
 	return buf, nil
 }
 
-func WithProblem(w http.ResponseWriter, p Problem) error {
-	return json.NewEncoder(w).Encode(p) 
+func WithProblem(w http.ResponseWriter, enc int, p Problem) error {
+	var bs []byte
+	var err error
+	switch enc {
+	case EncodeJSON:
+		w.Header().Set("Content-Type", "application/problem+json")
+		bs, err = json.Marshal(p)
+		if err != nil {
+			return fmt.Errorf("failed to encode Problem as JSON: %v", err)
+		}
+	case EncodeXML:
+		w.Header().Set("Content-Type", "application/problem+xml")
+		panic("TODO")
+	default:
+		return fmt.Errorf("unknown encoding supplied, use EncodeJSON or EncodeXML")
+	}
+	
+	if p.Status != 0 {
+		w.WriteHeader(p.Status)
+	} else {
+		w.WriteHeader(400)
+	}
+	_, err = w.Write(bs)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

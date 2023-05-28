@@ -21,7 +21,7 @@ type Problem struct {
 	Status int
 	Detail string
 	Instance string
-	// Non-standard fields. Values are serialized using json.Marshal()
+	// Non-standard fields. Values are serialized using json.Marshal() or xml.Marshal().
 	Extensions map[string]any
 }
 
@@ -55,6 +55,53 @@ func (p Problem) MarshalJSON() ([]byte, error) {
 		buf = append(buf, '}')
 	}
 	return buf, nil
+}
+
+func (p *Problem) UnmarshalJSON(data []byte) error {
+	var entries map[string]any
+	err := json.Unmarshal(data, &entries)
+	if err != nil {
+		return err
+	}
+
+	var ok bool
+	for k, v := range entries {
+		switch k {
+		case "type":
+			p.Type, ok = v.(string)
+			if !ok {
+				return fmt.Errorf(`expected "type" to be a string, got %v`, v)
+			}
+		case "title":
+			p.Title, ok = v.(string)
+			if !ok {
+				return fmt.Errorf(`expected "title" to be a string, got %v`, v)
+			}
+		case "status":
+			status, ok := v.(float64)
+			if !ok {
+				return fmt.Errorf(`expected "status" to be a float64, got %v`, v)
+			}
+
+			p.Status = int(status)
+		case "detail":
+			p.Detail, ok = v.(string)
+			if !ok {
+				return fmt.Errorf(`expected "detail" to be a string, got %v`, v)
+			}
+		case "instance":
+			p.Instance, ok = v.(string)
+			if !ok {
+				return fmt.Errorf(`expected "instance" to be a string, got %v`, v)
+			}
+		default:
+			if p.Extensions == nil {
+				p.Extensions = make(map[string]any)
+			}
+			p.Extensions[k] = v
+		}
+	}
+	return nil
 }
 
 func WithProblem(w http.ResponseWriter, enc int, p Problem) error {

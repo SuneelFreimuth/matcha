@@ -8,9 +8,16 @@ import (
 )
 
 
+type purchaseProblem struct {
+	BaseProblem
+	Balance int `json:"balance"`
+	Accounts []string `json:"accounts"`
+}
+
+
 func TestProblemToJSON(t *testing.T) {
 	t.Run("empty problem -> empty object", func(t *testing.T) {
-		p := Problem{}
+		p := BaseProblem{}
 		bs, err := json.Marshal(p)
 		if err != nil {
 			t.Error("error while encoding Problem as JSON:", err)
@@ -21,18 +28,18 @@ func TestProblemToJSON(t *testing.T) {
 	})
 
 	t.Run("complete problem -> complete object", func(t *testing.T) {
-		p := Problem{
-			Type: "https://example.io/problems/out-of-credit",
-			Title: "You do not have enough credit.",
-			Detail: "Your current balance is 30, but that costs 50.",
-			Status: 418,
-			Instance: "/account/12345/msgs/abc",
-			Extensions: map[string]any{
-				"balance": 30,
-				"accounts": []string{
-					"/account/12345",
-					"/account/67890",
-				},
+		p := purchaseProblem{
+			BaseProblem: BaseProblem{
+				Type: "https://example.io/problems/out-of-credit",
+				Title: "You do not have enough credit.",
+				Detail: "Your current balance is 30, but that costs 50.",
+				Status: 418,
+				Instance: "/account/12345/msgs/abc",
+			},
+			Balance: 30,
+			Accounts: []string{
+				"/account/12345",
+				"/account/67890",
 			},
 		}
 		bs, err := json.Marshal(p)
@@ -59,7 +66,7 @@ func TestProblemFromJSON(t *testing.T) {
 		if err != nil {
 			t.Errorf("error while unmarshaling JSON, %v", err)
 		}
-		if !reflect.DeepEqual(p, Problem{}) {
+		if !reflect.DeepEqual(p, purchaseProblem{}) {
 			t.Errorf("problem should be empty, got %#v", p)
 		}
 	})
@@ -81,18 +88,18 @@ func TestProblemFromJSON(t *testing.T) {
 			t.Errorf("error while unmarshaling JSON, %v", err)
 		}
 
-		expected := Problem{
-			Type: "https://example.io/problems/out-of-credit",
-			Title: "You do not have enough credit.",
-			Detail: "Your current balance is 30, but that costs 50.",
-			Status: 418,
-			Instance: "/account/12345/msgs/abc",
-			Extensions: map[string]any{
-				"balance": float64(30),
-				"accounts": []any{
-					"/account/12345",
-					"/account/67890",
-				},
+		expected := purchaseProblem{
+			BaseProblem: BaseProblem{
+				Type: "https://example.io/problems/out-of-credit",
+				Title: "You do not have enough credit.",
+				Detail: "Your current balance is 30, but that costs 50.",
+				Status: 418,
+				Instance: "/account/12345/msgs/abc",
+			},
+			Balance: 30,
+			Accounts: []string{
+				"/account/12345",
+				"/account/67890",
 			},
 		}
 		if !reflect.DeepEqual(p, expected) {
